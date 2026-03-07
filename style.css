@@ -1,0 +1,41 @@
+* { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+body { margin: 0; padding: 0; background-color: #f4f7f6; color: #333; }
+header { background-color: #0056b3; color: white; padding: 15px 20px; text-align: center; }
+main { max-width: 800px; margin: 20px auto; padding: 0 15px; }
+.hidden { display: none !important; }
+
+.auth-box, .card {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+input, select {
+    width: 100%; padding: 10px; margin: 8px 0 15px;
+    border: 1px solid #ccc; border-radius: 4px;
+}
+button {
+    background-color: #0056b3; color: white; border: none;
+    padding: 10px 15px; border-radius: 4px; cursor: pointer;
+    font-weight: bold; width: 100%;
+}
+button:hover { background-color: #004494; }
+.primary-btn { background-color: #28a745; padding: 15px; font-size: 1.1em; }
+.primary-btn:hover { background-color: #218838; }
+hr { border: 0; height: 1px; background: #eee; margin: 20px 0; }
+
+table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+th { background-color: #f8f9fa; }
+
+footer { text-align: center; margin-top: 40px; padding: 20px; color: #777; font-size: 0.9em; font-weight: bold;}
+
+/* PRINT STYLES FOR TERRITORY MAP */
+@media print {
+    .no-print { display: none !important; }
+    body, main { background: white; margin: 0; padding: 0; max-width: 100%; }
+    .card { box-shadow: none; border: none; padding: 0; }
+    #print-map-title { display: block !important; }
+    #territory-map { height: 800px !important; border: 2px solid black !important; }
+}

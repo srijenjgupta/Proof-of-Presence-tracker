@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proof of Presence (POP) Tracker | by-Srijen Gupta</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="style.css">
+<link rel="icon" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/854/854878.png">
+</head>
+<body>
+    <header class="no-print">
+        <h2>Proof of Presence (POP) Tracker</h2>
+        <p style="margin: 0; font-size: 0.9em; opacity: 0.9;">A lightweight field force verification tool by-Srijen Gupta</p>
+    </header>
+
+    <main>
+        <section id="auth-section" class="view-section">
+            
+            <div class="card guide-box no-print" style="background-color: #e9ecef; border-left: 5px solid #0056b3;">
+                <h3 style="margin-top: 0;">What is the POP Tracker?</h3>
+                <p>This tool helps small businesses verify that their field staff (sales, delivery, technicians) have physically visited a client's location using GPS geofencing.</p>
+                <ul style="padding-left: 20px;">
+                    <li><strong>Admins:</strong> Register your business, generate Staff IDs, and drop map pins to assign client territories.</li>
+                    <li><strong>Staff:</strong> Log in with your ID to see your daily roster. You must be within 100 meters of the client's map pin to successfully "Check-In".</li>
+                </ul>
+            </div>
+
+            <div class="auth-box no-print">
+                <h4>Business Registration (New Admin)</h4>
+                <input type="text" id="admin-company" placeholder="Company Name">
+                <button onclick="registerAdmin()">Register Business</button>
+                <hr>
+                <h4>Admin Login</h4>
+                <input type="text" id="admin-code-login" placeholder="Company Code (e.g. TATA-8X9P)">
+                <button onclick="loginAdmin()">Login as Admin</button>
+            </div>
+
+            <div class="auth-box no-print">
+                <h4>Staff Access</h4>
+                <input type="text" id="staff-company-code" placeholder="Company Code">
+                <input type="text" id="staff-id" placeholder="Staff ID (e.g. EMP-1234)">
+                <button onclick="loginStaff()" class="primary-btn">Login as Staff</button>
+            </div>
+        </section>
+
+        <section id="admin-section" class="view-section hidden">
+            <div class="no-print">
+                <h3>Admin Dashboard <span id="display-company-code"></span></h3>
+                <button onclick="logout()" style="background: #dc3545; margin-bottom: 20px;">Logout</button>
+                
+                <div class="card">
+                    <h4>1. Manage Staff</h4>
+                    <input type="text" id="new-staff-name" placeholder="Staff Name (e.g., Amit)">
+                    <button onclick="addStaff()">Generate Staff ID</button>
+                    <p id="latest-staff-id" style="color: green; font-weight: bold;"></p>
+                </div>
+
+<div class="card">
+    <h4>2. Add Client & Assign Staff</h4>
+    <label style="font-size: 0.8em; color: #555;">Enter Address OR Paste Full Google Maps Link (with @lat,long)</label>
+    <div style="display: flex; gap: 5px;">
+        <input type="text" id="address-search" placeholder="Search address or paste @19.24,72.12..." style="margin-bottom: 5px;">
+        <button onclick="toggleHelp()" style="width: 40px; background: #6c757d; padding: 0;">❓</button>
+    </div>
+
+    <div id="link-help" class="hidden" style="background: #fdfd96; padding: 10px; border-radius: 4px; font-size: 0.85em; margin-bottom: 10px; border: 1px solid #e5e500;">
+        <strong>How to get a link:</strong> Open Google Maps → Find location → Copy URL from the browser bar. <br>
+        <em>Note:</em> Link must contain coordinates (e.g., .../@19.07,72.87...). Short <code>goo.gl</code> links do not work.
+    </div>
+
+    <button onclick="searchAddress()">Search / Extract Pin</button>
+    
+    <div id="map" style="height: 300px; margin-top: 10px; border-radius: 8px;"></div>
+    <p id="coords-display" style="font-size: 0.9em; color: gray;">Drag pin to confirm exact location.</p>
+    
+    <input type="text" id="new-client-name" placeholder="Client/Shop Name" style="margin-top: 10px;">
+    <select id="assign-staff-dropdown" style="margin-top: 10px;">
+        <option value="">Assign to Staff Member...</option>
+    </select>
+
+    <button onclick="saveClient()">Confirm Location & Assign</button>
+</div>
+
+            <div class="card print-section" id="territory-card">
+                <h4>3. Printable Territory Map</h4>
+                <p class="no-print" style="font-size: 0.9em; color: gray;">Select a staff member to view their assigned client geofences.</p>
+                
+                <div class="no-print" style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <select id="view-territory-dropdown" style="flex: 1;">
+                        <option value="">Select Staff to Map...</option>
+                    </select>
+                    <button onclick="loadTerritoryMap()" style="width: auto; background: #17a2b8;">View Map</button>
+                    <button onclick="window.print()" style="width: auto; background: #28a745;">🖨️ Print</button>
+                </div>
+                
+                <h3 id="print-map-title" style="display: none; text-align: center;">Territory Map</h3>
+                <div id="territory-map" style="height: 400px; border-radius: 8px; border: 1px solid #ccc;"></div>
+            </div>
+
+            <div class="card no-print">
+                <h4>4. Live Attendance Matrix</h4>
+                <button onclick="downloadCSV()" class="primary-btn" style="margin-bottom: 10px; padding: 10px;">Download Data as CSV</button>
+                <table id="logs-table">
+                    <thead>
+                        <tr>
+                            <th>Date/Time</th>
+                            <th>Staff ID</th>
+                            <th>Assigned Client</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logs-body">
+                        </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="staff-section" class="view-section hidden no-print">
+            <h3>Staff Dashboard <span id="display-staff-id"></span></h3>
+            <button onclick="logout()" style="background: #dc3545; margin-bottom: 20px;">Logout</button>
+            
+            <div class="card">
+                <h4>Your Roster (<span id="current-date-display"></span>)</h4>
+                <p id="staff-status-msg" style="font-weight: bold; text-align: center;"></p>
+                
+                <table style="margin-top: 15px;">
+                    <thead>
+                        <tr>
+                            <th>Client Name</th>
+                            <th>Location Map</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="staff-dashboard-table">
+                        </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <footer class="no-print">
+        <p>Proof of Presence (POP) Tracker | Engineered by-Srijen Gupta</p>
+    </footer>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
