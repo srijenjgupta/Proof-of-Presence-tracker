@@ -4,15 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Proof of Presence (POP) Tracker | by-Srijen Gupta</title>
+    
     <meta property="og:title" content="Proof of Presence (POP) Tracker | by-Srijen Gupta">
-    <meta property="og:description" content="A lightweight GPS-geofenced tool for SMBs to verify staff field visits. Built by Srijen Gupta.">
+    <meta property="og:description" content="A lightweight GPS-geofenced tool for SMBs to verify staff field visits and track sales productivity.">
     <meta property="og:image" content="https://img.icons8.com/fluency/200/checked-user-location.png">
-    <meta property="og:url" content="https://srijenjgupta.github.io/Proof-of-Presence-tracker/">
     <meta property="og:type" content="website">
+
+    <link rel="icon" type="image/png" href="https://img.icons8.com/fluency/48/checked-user-location.png">
+
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="style.css">
-<link rel="icon" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-<link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/854/854878.png">
 </head>
 <body>
     <header class="no-print">
@@ -22,13 +23,12 @@
 
     <main>
         <section id="auth-section" class="view-section">
-            
             <div class="card guide-box no-print" style="background-color: #e9ecef; border-left: 5px solid #0056b3;">
                 <h3 style="margin-top: 0;">What is the POP Tracker?</h3>
-                <p>This tool helps small businesses verify that their field staff (sales, delivery, technicians) have physically visited a client's location using GPS geofencing.</p>
+                <p>This tool helps small businesses verify field staff visits using GPS geofencing and tracks visit outcomes.</p>
                 <ul style="padding-left: 20px;">
-                    <li><strong>Admins:</strong> Register your business, generate Staff IDs, and drop map pins to assign client territories.</li>
-                    <li><strong>Staff:</strong> Log in with your ID to see your daily roster. You must be within 100 meters of the client's map pin to successfully "Check-In".</li>
+                    <li><strong>Admins:</strong> Register your business, assign client territories, and track verified sales data.</li>
+                    <li><strong>Staff:</strong> Log in to see your roster. You must be within 100 meters of the client to submit your Visit Report and "Check-In".</li>
                 </ul>
             </div>
 
@@ -62,31 +62,32 @@
                     <p id="latest-staff-id" style="color: green; font-weight: bold;"></p>
                 </div>
 
-<div class="card">
-    <h4>2. Add Client & Assign Staff</h4>
-    <label style="font-size: 0.8em; color: #555;">Enter Address OR Paste Full Google Maps Link (with @lat,long)</label>
-    <div style="display: flex; gap: 5px;">
-        <input type="text" id="address-search" placeholder="Search address or paste @19.24,72.12..." style="margin-bottom: 5px;">
-        <button onclick="toggleHelp()" style="width: 40px; background: #6c757d; padding: 0;">❓</button>
-    </div>
+                <div class="card">
+                    <h4>2. Add Client & Assign Staff</h4>
+                    <label style="font-size: 0.8em; color: #555;">Enter Address OR Paste Full Google Maps Link</label>
+                    <div style="display: flex; gap: 5px;">
+                        <input type="text" id="address-search" placeholder="Search address or paste link (@19.24,72.12...)" style="margin-bottom: 5px;">
+                        <button onclick="toggleHelp()" style="width: 40px; background: #6c757d; padding: 0;">❓</button>
+                    </div>
 
-    <div id="link-help" class="hidden" style="background: #fdfd96; padding: 10px; border-radius: 4px; font-size: 0.85em; margin-bottom: 10px; border: 1px solid #e5e500;">
-        <strong>How to get a link:</strong> Open Google Maps → Find location → Copy URL from the browser bar. <br>
-        <em>Note:</em> Link must contain coordinates (e.g., .../@19.07,72.87...). Short <code>goo.gl</code> links do not work.
-    </div>
+                    <div id="link-help" class="hidden" style="background: #fdfd96; padding: 10px; border-radius: 4px; font-size: 0.85em; margin-bottom: 10px; border: 1px solid #e5e500;">
+                        <strong>How to get a link:</strong> Open Google Maps → Find location → Copy URL from browser. <br>
+                        <em>Note:</em> Link must contain coordinates. Short <code>goo.gl</code> links do not work.
+                    </div>
 
-    <button onclick="searchAddress()">Search / Extract Pin</button>
-    
-    <div id="map" style="height: 300px; margin-top: 10px; border-radius: 8px;"></div>
-    <p id="coords-display" style="font-size: 0.9em; color: gray;">Drag pin to confirm exact location.</p>
-    
-    <input type="text" id="new-client-name" placeholder="Client/Shop Name" style="margin-top: 10px;">
-    <select id="assign-staff-dropdown" style="margin-top: 10px;">
-        <option value="">Assign to Staff Member...</option>
-    </select>
+                    <button onclick="searchAddress()">Search / Extract Pin</button>
+                    
+                    <div id="map" style="height: 300px; margin-top: 10px; border-radius: 8px;"></div>
+                    <p id="coords-display" style="font-size: 0.9em; color: gray;">Drag pin to confirm exact location.</p>
+                    
+                    <input type="text" id="new-client-name" placeholder="Client/Shop Name" style="margin-top: 10px;">
+                    <select id="assign-staff-dropdown" style="margin-top: 10px;">
+                        <option value="">Assign to Staff Member...</option>
+                    </select>
 
-    <button onclick="saveClient()">Confirm Location & Assign</button>
-</div>
+                    <button onclick="saveClient()">Confirm Location & Assign</button>
+                </div>
+            </div>
 
             <div class="card print-section" id="territory-card">
                 <h4>3. Printable Territory Map</h4>
@@ -105,7 +106,7 @@
             </div>
 
             <div class="card no-print">
-                <h4>4. Live Attendance Matrix</h4>
+                <h4>4. Live Productivity & Attendance Matrix</h4>
                 <button onclick="downloadCSV()" class="primary-btn" style="margin-bottom: 10px; padding: 10px;">Download Data as CSV</button>
                 <table id="logs-table">
                     <thead>
@@ -113,6 +114,9 @@
                             <th>Date/Time</th>
                             <th>Staff ID</th>
                             <th>Assigned Client</th>
+                            <th>Orders</th>
+                            <th>Amount (₹)</th>
+                            <th>Comments</th>
                             <th>Status</th>
                         </tr>
                     </thead>
@@ -128,13 +132,23 @@
             
             <div class="card">
                 <h4>Your Roster (<span id="current-date-display"></span>)</h4>
+                
+                <div style="background: #e9ecef; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #0056b3;">
+                    <h5 style="margin-top: 0; margin-bottom: 10px; color: #333;">📝 Visit Report (Fill before Check-In)</h5>
+                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                        <input type="number" id="visit-orders" placeholder="# Orders (e.g., 2)" style="margin: 0;">
+                        <input type="number" id="visit-amount" placeholder="Amount ₹ (e.g., 5000)" style="margin: 0;">
+                    </div>
+                    <input type="text" id="visit-comments" placeholder="Comments (Min. 3 words)" style="margin: 0;">
+                </div>
+
                 <p id="staff-status-msg" style="font-weight: bold; text-align: center;"></p>
                 
                 <table style="margin-top: 15px;">
                     <thead>
                         <tr>
                             <th>Client Name</th>
-                            <th>Location Map</th>
+                            <th>Map</th>
                             <th>Status</th>
                             <th>Action</th>
                         </tr>
@@ -155,5 +169,4 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="app.js"></script>
 </body>
-
 </html>
