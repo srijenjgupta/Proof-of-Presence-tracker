@@ -24,12 +24,17 @@ let adminMap = null;
 let adminMarker = null;
 let currentSelectedCoords = null;
 let staffAssignments = []; 
-let tMap = null; // Territory Map
+let tMap = null;
 let territoryMarkers = [];
 
 function showSection(sectionId) {
     document.querySelectorAll('.view-section').forEach(sec => sec.classList.add('hidden'));
     document.getElementById(sectionId).classList.remove('hidden');
+}
+
+function toggleHelp() {
+    const helpBox = document.getElementById('link-help');
+    helpBox.classList.toggle('hidden');
 }
 
 // ==========================================
@@ -60,7 +65,7 @@ async function loginAdmin() {
         document.getElementById('display-company-code').innerText = `(Code: ${code})`;
         showSection('admin-section');
         initAdminMap();
-        initTerritoryMap(); // Initialize the print map
+        initTerritoryMap(); 
         loadStaffDropdown(); 
         listenToLogs(code);
     } else { alert("Invalid Company Code."); }
@@ -146,34 +151,25 @@ async function searchAddress() {
     const query = document.getElementById('address-search').value.trim();
     if(!query) return alert("Enter an address or link");
 
-    // 1. Check if the user pasted a web link
     const isUrl = query.startsWith("http://") || query.startsWith("https://");
-
-    // 2. Regex to extract Lat/Long (e.g., @19.24,72.12)
     const mapRegex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
     const match = query.match(mapRegex);
 
     if(match) {
-        // Success: Found coordinates in the URL
         setMapPin(parseFloat(match[1]), parseFloat(match[2]));
         return;
     }
 
-    // 3. ERROR HANDLING: It's a URL, but it has no coordinates (e.g., a shortlink)
     if (isUrl && !match) {
-        return alert("Error: Short links (like goo.gl) or links without coordinates cannot be processed.\n\nPlease type the actual address name (e.g., 'Kalyan Station') instead, and drop the pin manually.");
+        return alert("Error: Short links (like goo.gl) or links without coordinates cannot be processed.\n\nPlease type the actual address name instead, and drop the pin manually.");
     }
 
-    // 4. NORMAL SEARCH: It's text, so use the map search API
     try {
         const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
         const data = await response.json();
-        
         if(data.length > 0) {
             setMapPin(parseFloat(data[0].lat), parseFloat(data[0].lon));
-        } else { 
-            alert("Address not found on the map.\n\nTry searching for a nearby landmark or city, then drag the pin to the exact spot."); 
-        }
+        } else { alert("Address not found on the map.\n\nTry searching for a nearby landmark or city, then drag the pin to the exact spot."); }
     } catch (error) {
         alert("Network error while searching for the address. Please check your connection.");
     }
@@ -222,7 +218,6 @@ async function loadTerritoryMap() {
 
     document.getElementById('print-map-title').innerText = `Territory Map: ${staffId === 'ALL' ? 'All Staff' : staffId}`;
 
-    // Clear old markers
     territoryMarkers.forEach(m => tMap.removeLayer(m));
     territoryMarkers = [];
 
@@ -237,10 +232,7 @@ async function loadTerritoryMap() {
     snapshot.forEach(doc => {
         const client = doc.data();
         const latLng = [client.lat, client.lng];
-        
-        // Add Marker
         const marker = L.marker(latLng).bindPopup(`<b>${client.name}</b><br>Assigned: ${client.assignedTo}`).addTo(tMap);
-        // Add 100m Geofence Circle
         const circle = L.circle(latLng, { color: 'red', fillColor: '#f03', fillOpacity: 0.2, radius: 100 }).addTo(tMap);
         
         territoryMarkers.push(marker);
@@ -248,7 +240,6 @@ async function loadTerritoryMap() {
         bounds.push(latLng);
     });
 
-    // Fix grey map issue and fit bounds
     setTimeout(() => {
         tMap.invalidateSize();
         tMap.fitBounds(bounds, {padding: [50, 50]});
@@ -297,8 +288,8 @@ async function loadStaffDashboard(code, staffId) {
             const isVisited = visitedClients.includes(client.name);
             const statusColor = isVisited ? "green" : "orange";
             const statusText = isVisited ? "Visited" : "Pending";
-            const mapsLink = `https://www.google.com/maps/search/?api=1&query=${client.lat},${client.lng}`;
-
+            
+            const mapsLink = `http://googleusercontent.com/maps.google.com/maps?q=${client.lat},${client.lng}`;
             
             const actionBtn = isVisited 
                 ? `✔️ Done` 
@@ -318,6 +309,17 @@ function verifyLocation(clientIndex) {
     const target = staffAssignments[clientIndex];
     const statusMsg = document.getElementById('staff-status-msg');
 
+    const orders = document.getElementById('visit-orders').value;
+    const amount = document.getElementById('visit-amount').value;
+    const comments = document.getElementById('visit-comments').value.trim();
+
+    if(orders === "" || amount === "" || comments === "") {
+        return alert("Please fill in the Orders, Amount, and Comments in the Visit Report before checking in.");
+    }
+    if(comments.split(' ').length < 3) {
+        return alert("Please provide at least 3 words in the comments to describe the visit.");
+    }
+
     statusMsg.innerText = `Requesting GPS to verify presence at ${target.name}...`;
     statusMsg.style.color = "orange";
 
@@ -325,17 +327,26 @@ function verifyLocation(clientIndex) {
         const dist = getDistanceInMeters(position.coords.latitude, position.coords.longitude, target.lat, target.lng);
 
         if(dist <= 100) {
-            statusMsg.innerText = "✅ Verified! Saving...";
+            statusMsg.innerText = "✅ Verified! Saving report to database...";
             try {
                 await db.collection("Visits").add({
                     companyCode: currentUser.companyCode,
                     staffId: currentUser.staffId,
                     clientName: target.name,
+                    orders: Number(orders),
+                    amount: Number(amount),
+                    comments: comments,
                     timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                     status: "Visited"
                 });
-                statusMsg.innerText = "✅ Check-in successful!";
+                
+                statusMsg.innerText = "✅ Check-in and Report successful!";
                 statusMsg.style.color = "green";
+                
+                document.getElementById('visit-orders').value = "";
+                document.getElementById('visit-amount').value = "";
+                document.getElementById('visit-comments').value = "";
+                
                 loadStaffDashboard(currentUser.companyCode, currentUser.staffId);
             } catch (err) { statusMsg.innerText = "❌ Verification passed, but failed to save."; }
         } else {
@@ -365,18 +376,21 @@ function listenToLogs(code) {
           
           logs.forEach(log => {
               const time = log.timestamp ? log.timestamp.toDate().toLocaleString() : "Just now";
-              tbody.innerHTML += `<tr><td>${time}</td><td>${log.staffId}</td><td>${log.clientName}</td><td style="color:green; font-weight:bold;">${log.status}</td></tr>`;
+              tbody.innerHTML += `<tr>
+                  <td>${time}</td>
+                  <td>${log.staffId}</td>
+                  <td>${log.clientName}</td>
+                  <td>${log.orders || 0}</td>
+                  <td>₹${log.amount || 0}</td>
+                  <td>${log.comments || '-'}</td>
+                  <td style="color:green; font-weight:bold;">${log.status}</td>
+              </tr>`;
           });
       });
 }
 
-function toggleHelp() {
-    const helpBox = document.getElementById('link-help');
-    helpBox.classList.toggle('hidden');
-}
-
 function downloadCSV() {
-    let csvContent = "data:text/csv;charset=utf-8,Date/Time,Staff ID,Assigned Client,Status\n";
+    let csvContent = "data:text/csv;charset=utf-8,Date/Time,Staff ID,Assigned Client,Orders,Amount,Comments,Status\n";
     const rows = document.querySelectorAll("#logs-table tr");
     rows.forEach(row => {
         let cols = row.querySelectorAll("td, th");
@@ -385,6 +399,6 @@ function downloadCSV() {
     });
     const link = document.createElement("a");
     link.setAttribute("href", encodeURI(csvContent));
-    link.setAttribute("download", "attendance_logs.csv");
+    link.setAttribute("download", "attendance_productivity_logs.csv");
     document.body.appendChild(link); link.click(); document.body.removeChild(link);
 }
