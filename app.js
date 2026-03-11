@@ -26,7 +26,6 @@ let currentSelectedCoords = null;
 let staffAssignments = []; 
 let tMap = null;
 let territoryMarkers = [];
-let currentClientReportingIndex = null; // Tracks which client is being checked-in
 
 function showSection(sectionId) {
     document.querySelectorAll('.view-section').forEach(sec => sec.classList.add('hidden'));
@@ -248,7 +247,7 @@ async function loadTerritoryMap() {
 }
 
 // ==========================================
-// 6. STAFF DASHBOARD & MODAL LOGIC
+// 6. STAFF DASHBOARD & CHECK-IN ENGINE
 // ==========================================
 function getDistanceInMeters(lat1, lon1, lat2, lon2) {
     const R = 6371e3; 
@@ -258,23 +257,6 @@ function getDistanceInMeters(lat1, lon1, lat2, lon2) {
     const Δλ = (lon2-lon1) * Math.PI/180;
     const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
     return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))); 
-}
-
-// NEW: Functions to handle the Pop-Up
-function openReportModal(index) {
-    currentClientReportingIndex = index;
-    const target = staffAssignments[index];
-    document.getElementById('modal-client-name').innerText = `Report for: ${target.name}`;
-    document.getElementById('report-modal').classList.remove('hidden');
-}
-
-function closeReportModal() {
-    document.getElementById('report-modal').classList.add('hidden');
-    document.getElementById('visit-orders').value = "";
-    document.getElementById('visit-amount').value = "";
-    document.getElementById('visit-comments').value = "";
-    document.getElementById('modal-status-msg').innerText = "";
-    currentClientReportingIndex = null;
 }
 
 async function loadStaffDashboard(code, staffId) {
@@ -309,14 +291,13 @@ async function loadStaffDashboard(code, staffId) {
             
             const mapsLink = `http://googleusercontent.com/maps.google.com/maps?q=${client.lat},${client.lng}`;
             
-            // Trigger the modal instead of instantly checking GPS
             const actionBtn = isVisited 
                 ? `✔️ Done` 
-                : `<button onclick="openReportModal(${index})" style="padding: 5px; font-size: 0.8em; background: #0056b3;">Check-In</button>`;
+                : `<button onclick="verifyLocation(${index})" style="padding: 5px; font-size: 0.8em; background: #0056b3;">Check-In</button>`;
 
             tbody.innerHTML += `<tr>
                 <td><strong>${client.name}</strong></td>
-                <td><a href="${mapsLink}" target="_blank">Map</a></td>
+                <td><a href="${mapsLink}" target="_blank">Open Map</a></td>
                 <td style="color:${statusColor}; font-weight:bold;">${statusText}</td>
                 <td>${actionBtn}</td>
             </tr>`;
@@ -324,22 +305,22 @@ async function loadStaffDashboard(code, staffId) {
     } catch (error) { tbody.innerHTML = "<tr><td colspan='4'>Error loading roster.</td></tr>"; }
 }
 
-function verifyLocation() {
-    if(currentClientReportingIndex === null) return;
-    
-    const target = staffAssignments[currentClientReportingIndex];
-    const statusMsg = document.getElementById('modal-status-msg');
-
+function verifyLocation(clientIndex) {
+    // 1. Grab values from the inline form
     const orders = document.getElementById('visit-orders').value;
     const amount = document.getElementById('visit-amount').value;
     const comments = document.getElementById('visit-comments').value.trim();
 
+    // 2. Validate form is filled before checking GPS
     if(orders === "" || amount === "" || comments === "") {
-        return alert("Please fill in the Orders, Amount, and Comments in the Visit Report before checking in.");
+        return alert("⚠️ Step 1 Incomplete: Please fill in the Orders, Amount, and Comments in the Visit Report box above before clicking Check-In.");
     }
     if(comments.split(' ').length < 3) {
-        return alert("Please provide at least 3 words in the comments to describe the visit.");
+        return alert("⚠️ Comments must be at least 3 words.");
     }
+
+    const target = staffAssignments[clientIndex];
+    const statusMsg = document.getElementById('staff-status-msg');
 
     statusMsg.innerText = `Requesting GPS to verify presence at ${target.name}...`;
     statusMsg.style.color = "orange";
@@ -350,6 +331,7 @@ function verifyLocation() {
         if(dist <= 100) {
             statusMsg.innerText = "✅ Verified! Saving report...";
             try {
+                // 3. Save to database
                 await db.collection("Visits").add({
                     companyCode: currentUser.companyCode,
                     staffId: currentUser.staffId,
@@ -361,8 +343,15 @@ function verifyLocation() {
                     status: "Visited"
                 });
                 
-                alert("✅ Check-in and Report successful!");
-                closeReportModal();
+                alert(`✅ Successfully Checked-In and reported for ${target.name}!`);
+                statusMsg.innerText = "";
+                
+                // 4. Clear the form for the next client
+                document.getElementById('visit-orders').value = "";
+                document.getElementById('visit-amount').value = "";
+                document.getElementById('visit-comments').value = "";
+                
+                // Refresh table
                 loadStaffDashboard(currentUser.companyCode, currentUser.staffId);
             } catch (err) { statusMsg.innerText = "❌ Verification passed, but failed to save."; }
         } else {
