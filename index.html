@@ -11,7 +11,6 @@
     <meta property="og:type" content="website">
 
     <link rel="icon" type="image/png" href="https://img.icons8.com/fluency/48/checked-user-location.png">
-
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="style.css">
 </head>
@@ -76,7 +75,6 @@
                     </div>
 
                     <button onclick="searchAddress()">Search / Extract Pin</button>
-                    
                     <div id="map" style="height: 300px; margin-top: 10px; border-radius: 8px;"></div>
                     <p id="coords-display" style="font-size: 0.9em; color: gray;">Drag pin to confirm exact location.</p>
                     
@@ -92,15 +90,11 @@
             <div class="card print-section" id="territory-card">
                 <h4>3. Printable Territory Map</h4>
                 <p class="no-print" style="font-size: 0.9em; color: gray;">Select a staff member to view their assigned client geofences.</p>
-                
                 <div class="no-print" style="display: flex; gap: 10px; margin-bottom: 10px;">
-                    <select id="view-territory-dropdown" style="flex: 1;">
-                        <option value="">Select Staff to Map...</option>
-                    </select>
+                    <select id="view-territory-dropdown" style="flex: 1;"><option value="">Select Staff to Map...</option></select>
                     <button onclick="loadTerritoryMap()" style="width: auto; background: #17a2b8;">View Map</button>
                     <button onclick="window.print()" style="width: auto; background: #28a745;">🖨️ Print</button>
                 </div>
-                
                 <h3 id="print-map-title" style="display: none; text-align: center;">Territory Map</h3>
                 <div id="territory-map" style="height: 400px; border-radius: 8px; border: 1px solid #ccc;"></div>
             </div>
@@ -120,8 +114,7 @@
                             <th>Status</th>
                         </tr>
                     </thead>
-                    <tbody id="logs-body">
-                        </tbody>
+                    <tbody id="logs-body"></tbody>
                 </table>
             </div>
         </section>
@@ -132,17 +125,6 @@
             
             <div class="card">
                 <h4>Your Roster (<span id="current-date-display"></span>)</h4>
-                
-                <div style="background: #e9ecef; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #0056b3;">
-                    <h5 style="margin-top: 0; margin-bottom: 10px; color: #333;">📝 Visit Report (Fill before Check-In)</h5>
-                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                        <input type="number" id="visit-orders" placeholder="# Orders (e.g., 2)" style="margin: 0;">
-                        <input type="number" id="visit-amount" placeholder="Amount ₹ (e.g., 5000)" style="margin: 0;">
-                    </div>
-                    <input type="text" id="visit-comments" placeholder="Comments (Min. 3 words)" style="margin: 0;">
-                </div>
-
-                <p id="staff-status-msg" style="font-weight: bold; text-align: center;"></p>
                 
                 <table style="margin-top: 15px;">
                     <thead>
@@ -158,6 +140,25 @@
                 </table>
             </div>
         </section>
+
+        <div id="report-modal" class="modal hidden no-print">
+            <div class="modal-content card">
+                <h4 id="modal-client-name" style="margin-top: 0; color: #0056b3;">Visit Report</h4>
+                <p style="font-size: 0.85em; color: #555; margin-bottom: 15px;">Fill details to submit and verify location.</p>
+                
+                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <input type="number" id="visit-orders" placeholder="# Orders (e.g., 2)" style="margin: 0;">
+                    <input type="number" id="visit-amount" placeholder="Amount ₹" style="margin: 0;">
+                </div>
+                <input type="text" id="visit-comments" placeholder="Comments (Min. 3 words)" style="margin-bottom: 15px;">
+                
+                <p id="modal-status-msg" style="font-weight: bold; text-align: center; font-size: 0.9em;"></p>
+                
+                <button onclick="verifyLocation()" class="primary-btn">Submit & Verify Location</button>
+                <button onclick="closeReportModal()" style="background: #dc3545; margin-top: 10px; padding: 10px;">Cancel</button>
+            </div>
+        </div>
+
     </main>
 
     <footer class="no-print">
