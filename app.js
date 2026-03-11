@@ -26,6 +26,7 @@ let currentSelectedCoords = null;
 let staffAssignments = []; 
 let tMap = null;
 let territoryMarkers = [];
+let currentClientReportingIndex = null; // Tracks which client is being checked-in
 
 function showSection(sectionId) {
     document.querySelectorAll('.view-section').forEach(sec => sec.classList.add('hidden'));
@@ -247,7 +248,7 @@ async function loadTerritoryMap() {
 }
 
 // ==========================================
-// 6. STAFF DASHBOARD & CHECK-IN ENGINE
+// 6. STAFF DASHBOARD & MODAL LOGIC
 // ==========================================
 function getDistanceInMeters(lat1, lon1, lat2, lon2) {
     const R = 6371e3; 
@@ -257,6 +258,23 @@ function getDistanceInMeters(lat1, lon1, lat2, lon2) {
     const Δλ = (lon2-lon1) * Math.PI/180;
     const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
     return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))); 
+}
+
+// NEW: Functions to handle the Pop-Up
+function openReportModal(index) {
+    currentClientReportingIndex = index;
+    const target = staffAssignments[index];
+    document.getElementById('modal-client-name').innerText = `Report for: ${target.name}`;
+    document.getElementById('report-modal').classList.remove('hidden');
+}
+
+function closeReportModal() {
+    document.getElementById('report-modal').classList.add('hidden');
+    document.getElementById('visit-orders').value = "";
+    document.getElementById('visit-amount').value = "";
+    document.getElementById('visit-comments').value = "";
+    document.getElementById('modal-status-msg').innerText = "";
+    currentClientReportingIndex = null;
 }
 
 async function loadStaffDashboard(code, staffId) {
@@ -291,13 +309,14 @@ async function loadStaffDashboard(code, staffId) {
             
             const mapsLink = `http://googleusercontent.com/maps.google.com/maps?q=${client.lat},${client.lng}`;
             
+            // Trigger the modal instead of instantly checking GPS
             const actionBtn = isVisited 
                 ? `✔️ Done` 
-                : `<button onclick="verifyLocation(${index})" style="padding: 5px; font-size: 0.8em; background: #0056b3;">Check-In</button>`;
+                : `<button onclick="openReportModal(${index})" style="padding: 5px; font-size: 0.8em; background: #0056b3;">Check-In</button>`;
 
             tbody.innerHTML += `<tr>
                 <td><strong>${client.name}</strong></td>
-                <td><a href="${mapsLink}" target="_blank">Open Map</a></td>
+                <td><a href="${mapsLink}" target="_blank">Map</a></td>
                 <td style="color:${statusColor}; font-weight:bold;">${statusText}</td>
                 <td>${actionBtn}</td>
             </tr>`;
@@ -305,9 +324,11 @@ async function loadStaffDashboard(code, staffId) {
     } catch (error) { tbody.innerHTML = "<tr><td colspan='4'>Error loading roster.</td></tr>"; }
 }
 
-function verifyLocation(clientIndex) {
-    const target = staffAssignments[clientIndex];
-    const statusMsg = document.getElementById('staff-status-msg');
+function verifyLocation() {
+    if(currentClientReportingIndex === null) return;
+    
+    const target = staffAssignments[currentClientReportingIndex];
+    const statusMsg = document.getElementById('modal-status-msg');
 
     const orders = document.getElementById('visit-orders').value;
     const amount = document.getElementById('visit-amount').value;
@@ -327,7 +348,7 @@ function verifyLocation(clientIndex) {
         const dist = getDistanceInMeters(position.coords.latitude, position.coords.longitude, target.lat, target.lng);
 
         if(dist <= 100) {
-            statusMsg.innerText = "✅ Verified! Saving report to database...";
+            statusMsg.innerText = "✅ Verified! Saving report...";
             try {
                 await db.collection("Visits").add({
                     companyCode: currentUser.companyCode,
@@ -340,13 +361,8 @@ function verifyLocation(clientIndex) {
                     status: "Visited"
                 });
                 
-                statusMsg.innerText = "✅ Check-in and Report successful!";
-                statusMsg.style.color = "green";
-                
-                document.getElementById('visit-orders').value = "";
-                document.getElementById('visit-amount').value = "";
-                document.getElementById('visit-comments').value = "";
-                
+                alert("✅ Check-in and Report successful!");
+                closeReportModal();
                 loadStaffDashboard(currentUser.companyCode, currentUser.staffId);
             } catch (err) { statusMsg.innerText = "❌ Verification passed, but failed to save."; }
         } else {
